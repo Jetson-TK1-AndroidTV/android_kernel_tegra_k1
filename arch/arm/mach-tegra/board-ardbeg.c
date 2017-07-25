@@ -1365,6 +1365,25 @@ static int tegra_ardbeg_i2c_notifier_call(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+/* Display panel/HDMI */
+static int ardbeg_dev_dummy(struct device *dev)
+{
+	return 0;
+}
+
+static int ardbeg_dummy(void)
+{
+	return 0;
+}
+
+struct tegra_panel_ops ardbeg_hdmi_ops = {
+	.enable = ardbeg_dev_dummy,
+	.disable = ardbeg_dev_dummy,
+	.postsuspend = ardbeg_dummy,
+	.hotplug_init = ardbeg_dev_dummy,
+};
+
+
 static struct notifier_block platform_nb = {
 	.notifier_call = tegra_ardbeg_notifier_call,
 };
@@ -1383,11 +1402,9 @@ static void __init tegra_ardbeg_dt_init(void)
 	tegra_get_display_board_info(&display_board_info);
 
 #ifndef CONFIG_TEGRA_HDMI_PRIMARY
-	/* In Ardbeg, zero display_board_id is considered to
-	 * Panasonic wuxga panel one */
-	tegra_set_fixed_panel_ops(true, &dsi_a_1080p_14_0_ops,
-		"a,1080p-14-0");
-	tegra_set_fixed_pwm_bl_ops(dsi_a_1080p_14_0_ops.pwm_bl_ops);
+		/* device is hdmi primary. */
+	tegra_set_fixed_panel_ops(true, 
+		&ardbeg_hdmi_ops, "hdmi,display");
 #endif
 	bus_register_notifier(&platform_bus_type, &platform_nb);
 	bus_register_notifier(&i2c_bus_type, &i2c_nb);
