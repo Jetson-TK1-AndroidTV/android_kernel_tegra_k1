@@ -189,8 +189,6 @@
 		nvidia,lane-map = <0x12>;
 		status = "okay";
 
-		iommus = <&smmu TEGRA_SWGROUP_AFI>;
-
 		pci@1,0 {
 			nvidia,disable-clock-request;
 			status = "okay";
