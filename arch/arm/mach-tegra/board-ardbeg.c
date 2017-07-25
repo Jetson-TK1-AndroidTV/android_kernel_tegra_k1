@@ -380,27 +380,6 @@ static struct platform_device norrin_audio_device_max98090 = {
 	},
 };
 
-static struct platform_device *ardbeg_devices[] __initdata = {
-	&tegra_rtc_device,
-#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && !defined(CONFIG_USE_OF)
-	&tegra12_se_device,
-#endif
-	&tegra_ahub_device,
-	&tegra_dam_device0,
-	&tegra_dam_device1,
-	&tegra_dam_device2,
-	&tegra_i2s_device0,
-	&tegra_i2s_device1,
-	&tegra_i2s_device3,
-	&tegra_i2s_device4,
-	&tegra_spdif_device,
-	&spdif_dit_device,
-	&bluetooth_dit_device,
-	&baseband_dit_device,
-	&tegra_offload_device,
-	&tegra30_avp_audio_device,
-};
-
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
@@ -1185,6 +1164,71 @@ static struct tegra_io_dpd pexclk2_io = {
 	.io_dpd_bit		= 6,
 };
 
+/* Display panel/HDMI */
+static int ardbeg_dev_dummy(struct device *dev)
+{
+	return 0;
+}
+
+static int ardbeg_dummy(void)
+{
+	return 0;
+}
+
+struct tegra_panel_ops ardbeg_hdmi_ops = {
+	.enable = ardbeg_dev_dummy,
+	.disable = ardbeg_dev_dummy,
+	.postsuspend = ardbeg_dummy,
+	.hotplug_init = ardbeg_dev_dummy,
+};
+
+static void ardbeg_panel_init(void)
+{
+	if (of_machine_is_compatible("nvidia,jetson-tk1")) {
+		/* device is hdmi primary. */
+		tegra_set_fixed_panel_ops(true,
+				&ardbeg_hdmi_ops, "hdmi,display");
+	} else {
+		tegra_set_fixed_panel_ops(true,
+				&edp_a_1080p_14_0_ops, "a-edp,1080p-14-0");
+		tegra_set_fixed_panel_ops(false,
+				&ardbeg_hdmi_ops, "hdmi,display");
+		tegra_set_fixed_pwm_bl_ops(edp_a_1080p_14_0_ops.pwm_bl_ops);
+	}
+}
+
+static struct platform_device *ardbeg_devices[] __initdata = {
+	&tegra_rtc_device,
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && !defined(CONFIG_USE_OF)
+	&tegra12_se_device,
+#endif
+	&tegra_ahub_device,
+	&tegra_dam_device0,
+	&tegra_dam_device1,
+	&tegra_dam_device2,
+	&tegra_i2s_device0,
+	&tegra_i2s_device1,
+	&tegra_i2s_device3,
+	&tegra_i2s_device4,
+	&tegra_spdif_device,
+	&spdif_dit_device,
+	&bluetooth_dit_device,
+	&baseband_dit_device,
+	&tegra_offload_device,
+	&tegra30_avp_audio_device,
+};
+
+static void __init tegra_ardbeg_init_early(void)
+{
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E2548 ||
+			board_info.board_id == BOARD_P2530)
+		loki_rail_alignment_init();
+	else
+		ardbeg_rail_alignment_init();
+	tegra12x_init_early();
+}
+
 static void __init tegra_ardbeg_late_init(void)
 {
 	struct board_info board_info;
@@ -1253,6 +1297,7 @@ static void __init tegra_ardbeg_late_init(void)
 		ardbeg_emc_init();
 
 	isomgr_init();
+	ardbeg_panel_init();
 
 	if (!of_machine_is_compatible("nvidia,green-arrow" ))
 		ardbeg_touch_init();
@@ -1290,17 +1335,6 @@ static void __init tegra_ardbeg_late_init(void)
 	ardbeg_setup_bluedroid_pm();
 #endif
 	ardbeg_sysedp_dynamic_capping_init();
-}
-
-static void __init tegra_ardbeg_init_early(void)
-{
-	tegra_get_board_info(&board_info);
-	if (board_info.board_id == BOARD_E2548 ||
-			board_info.board_id == BOARD_P2530)
-		loki_rail_alignment_init();
-	else
-		ardbeg_rail_alignment_init();
-	tegra12x_init_early();
 }
 
 static int tegra_ardbeg_notifier_call(struct notifier_block *nb,
@@ -1365,34 +1399,6 @@ static int tegra_ardbeg_i2c_notifier_call(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-/* Display panel/HDMI */
-static int ardbeg_dev_dummy(struct device *dev)
-{
-	return 0;
-}
-
-static int ardbeg_dummy(void)
-{
-	return 0;
-}
-
-struct tegra_panel_ops ardbeg_hdmi_ops = {
-	.enable = ardbeg_dev_dummy,
-	.disable = ardbeg_dev_dummy,
-	.postsuspend = ardbeg_dummy,
-	.hotplug_init = ardbeg_dev_dummy,
-};
-
-
-static struct notifier_block platform_nb = {
-	.notifier_call = tegra_ardbeg_notifier_call,
-};
-
-
-static struct notifier_block i2c_nb = {
-	.notifier_call = tegra_ardbeg_i2c_notifier_call,
-};
-
 static void __init tegra_ardbeg_dt_init(void)
 {
 	if(of_machine_is_compatible("nvidia,green-arrow"))
@@ -1402,9 +1408,11 @@ static void __init tegra_ardbeg_dt_init(void)
 	tegra_get_display_board_info(&display_board_info);
 
 #ifndef CONFIG_TEGRA_HDMI_PRIMARY
-		/* device is hdmi primary. */
-	tegra_set_fixed_panel_ops(true, 
-		&ardbeg_hdmi_ops, "hdmi,display");
+	/* In Ardbeg, zero display_board_id is considered to
+	 * Panasonic wuxga panel one */
+	tegra_set_fixed_panel_ops(true, &dsi_a_1080p_14_0_ops,
+		"a,1080p-14-0");
+	tegra_set_fixed_pwm_bl_ops(dsi_a_1080p_14_0_ops.pwm_bl_ops);
 #endif
 	bus_register_notifier(&platform_bus_type, &platform_nb);
 	bus_register_notifier(&i2c_bus_type, &i2c_nb);
@@ -1418,6 +1426,14 @@ static void __init tegra_ardbeg_dt_init(void)
 
 	tegra_ardbeg_late_init();
 }
+
+static struct notifier_block platform_nb = {
+	.notifier_call = tegra_ardbeg_notifier_call,
+};
+
+static struct notifier_block i2c_nb = {
+	.notifier_call = tegra_ardbeg_i2c_notifier_call,
+};
 
 static void __init tegra_ardbeg_reserve(void)
 {

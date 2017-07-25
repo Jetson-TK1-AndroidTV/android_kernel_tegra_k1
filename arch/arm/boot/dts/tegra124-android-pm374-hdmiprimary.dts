@@ -1,0 +1,65 @@
+/*
+ *
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/* This file is for Android on Jetson */
+/* To make HDMI primary */
+#include "tegra124-jetson_tk1-pm375-000-c00-00.dts"
+
+/ {
+	model = "NVIDIA Tegra124 PM375";
+	compatible = "nvidia,jetson-tk1", "nvidia,tegra124";
+	nvidia,dtsfilename = __FILE__;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	chosen {
+		bootargs = "tegraid=40.0.0.00.00 vmalloc=256M video=tegrafb console=ttyS0,115200n8 earlyprintk";
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "jetson-tk1";
+		};
+	};
+
+	host1x {
+		sor {
+			panel-a-edp-1080p-14-0 {
+				status = "disabled";
+			};
+		};
+
+		dpaux {
+			status = "disabled";
+		};
+
+		/* tegradc.0 */
+		dc@54200000 {
+			nvidia,dc-flags = <0>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,cmu-enable = <0>;
+		};
+
+		/* tegradc.1 */
+		dc@54240000 {
+			status = "disabled";
+		};
+	};
+};

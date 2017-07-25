@@ -25,7 +25,6 @@
 
 int ardbeg_emc_init(void);
 int ardbeg_display_init(void);
-int ardbeg_panel_init(void);
 int ardbeg_sdhci_init(void);
 int ardbeg_sensors_init(void);
 int ardbeg_regulator_init(void);
